@@ -1,0 +1,88 @@
+# Fold Toggle
+
+Switch a foldable phone between its inner and outer screen **on demand** — for phones
+whose hinge sensor no longer works.
+
+When the flex (ribbon) cable to a foldable's hinge/fold sensor comes loose or fails, the
+phone can't tell it's been folded: the inner screen stays on and the cover screen never
+takes over. Fold Toggle gives you a button for what the hinge used to do.
+
+<a href="https://play.google.com/store/apps/details?id=com.reveille.foldtoggle">Get it on Google Play</a> ·
+[Download APK](https://github.com/reveille45/fold-toggle/releases/latest) ·
+[Privacy policy](https://reveille45.github.io/fold-toggle/privacy.html)
+
+## Features
+
+- **Always-on notification** — tap it from either screen to switch.
+- **Quick Settings tile** — "Outer screen", on/off.
+- **Launcher shortcut** — long-press the app icon → *Switch screen*.
+- **Automation** — Tasker/Macrodroid etc. can launch `ToggleActivity` (see below).
+- **No data collected**, no internet permission, no ads. ~60 KB.
+
+## Device support
+
+Fold Toggle asks the phone which display modes it supports and looks for the
+**rear display** mode (inner screen off, outer screen on) — the same mode Android uses
+for "rear camera selfie" features. Only phones that expose it to apps can work.
+
+| Device | Status |
+|---|---|
+| Google Pixel 9 Pro Fold | ✅ Tested (the phone this was built for) |
+| Google Pixel Fold / Pixel 10 Pro Fold | 🟡 Expected to work — please report |
+| Samsung Galaxy Z Fold 5 and later (One UI 6+) | 🟡 Beta — Samsung supports rear display mode; untested |
+| Flip phones (Galaxy Z Flip, Motorola Razr) | ❌ Unlikely — cover screens usually aren't an app-requestable mode |
+
+**Help add your phone:** open the app, scroll to *Device info*, and tap
+**Report this device on GitHub** (or copy the info into a
+[device report](https://github.com/reveille45/fold-toggle/issues/new?template=device-report.yml)).
+Reports from working *and* non-working phones are both useful.
+
+Requires Android 14 or newer.
+
+## How it works
+
+Android 14+ has a system service, `DeviceStateManager`, that tracks a foldable's
+posture (closed, half-open, open, rear display…). It's a hidden API — not in the public
+SDK — so the app calls it via reflection:
+
+1. **Detect** the rear-display state ID. OEMs number states differently, so it checks, in
+   order: the framework's `config_deviceStateRearDisplay` value, a state flagged
+   `PROPERTY_FEATURE_REAR_DISPLAY` (Android 15+), and a state whose name contains
+   `REAR_DISPLAY`.
+2. **Request** it from an invisible activity — the platform only accepts requests from
+   the focused, top-most app. (`CLOSED` itself can never be requested by apps.)
+3. **Hold** it with a foreground service, because a request lives only as long as the
+   requesting process.
+4. **Release** by re-requesting (to own the request) then cancelling.
+
+Because it relies on hidden APIs, a future Android or OEM update could break it.
+
+### Automation
+
+```
+adb shell am start -n com.reveille.foldtoggle/.ToggleActivity                      # toggle
+adb shell am start -n com.reveille.foldtoggle/.ToggleActivity --ez wantOuter true  # force outer
+adb shell am start -n com.reveille.foldtoggle/.ToggleActivity --ez wantOuter false # back to inner
+adb shell am start -n com.reveille.foldtoggle/.ToggleActivity --ei state 3         # manual state ID
+```
+
+`state` overrides detection for the life of the app process — useful for testing a
+device where detection picks the wrong state (please file a report if so).
+
+## Building
+
+Open the project in Android Studio (Gradle 9.5, AGP 9.3.1, Java only, no dependencies),
+or from the command line:
+
+```
+./gradlew assembleDebug        # app/build/outputs/apk/debug/app-debug.apk
+./gradlew bundleRelease        # app/build/outputs/bundle/release/app-release.aab
+```
+
+Lint needs a **JDK 21** runtime (AGP 9.3 lint crashes on JDK 17 with
+`NoSuchMethodError: List.removeLast()`); Android Studio's bundled JBR works. Release
+steps are in [docs/RELEASE.md](docs/RELEASE.md).
+
+## License
+
+[MIT](LICENSE)

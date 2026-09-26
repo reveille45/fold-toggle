@@ -1,0 +1,29 @@
+name: Device report
+description: Tell us whether Fold Toggle works on your phone
+title: "Device report: "
+labels: ["device-report"]
+body:
+  - type: dropdown
+    id: result
+    attributes:
+      label: Does switching to the outer screen work?
+      options:
+        - "Yes, works fully"
+        - "Partly (explain below)"
+        - "No — app says unsupported"
+        - "No — app says supported but nothing happens / error"
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Device info
+      description: Open Fold Toggle → Device info → "Copy device info", and paste it here. (Filled in automatically if you used the in-app Report button.)
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Which screen was on, what you tapped, any error message, whether the hinge sensor on this phone is broken.

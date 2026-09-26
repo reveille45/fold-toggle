@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Fold Toggle</string>
+    <string name="intro">For foldables whose hinge sensor has failed (for example a loose or damaged flex cable), so the phone no longer switches screens when you fold it. Fold Toggle switches between the inner and outer screen on demand.</string>
+    <string name="status_supported">✓ This device is supported.</string>
+    <string name="status_unsupported">✗ No switchable outer-screen mode was found on this device. Please send a device report below so support can be added.</string>
+    <string name="btn_switch">Switch screen now</string>
+    <string name="btn_tile">Add Quick Settings tile</string>
+    <string name="btn_notif">Allow notifications</string>
+    <string name="howto">Switch screens from the always-on notification, the Quick Settings tile, or by long-pressing the app icon. Tap again on the outer screen to switch back.</string>
+    <string name="diagnostics_header">Device info</string>
+    <string name="btn_copy">Copy device info</string>
+    <string name="btn_report">Report this device on GitHub</string>
+    <string name="btn_source">Source code</string>
+    <string name="btn_privacy">Privacy policy</string>
+    <string name="copied">Copied</string>
+
+    <string name="channel_name">Screen toggle</string>
+    <string name="notif_outer_title">Outer screen</string>
+    <string name="notif_outer_text">Tap to switch back to the inner screen</string>
+    <string name="notif_inner_title">Inner screen</string>
+    <string name="notif_inner_text">Tap to use the outer screen</string>
+
+    <string name="tile_label">Outer screen</string>
+    <string name="tile_on">On</string>
+    <string name="tile_off">Off</string>
+    <string name="tile_unsupported">Unsupported</string>
+    <string name="tile_already_added">Tile already added</string>
+
+    <string name="shortcut_switch">Switch screen</string>
+    <string name="unsupported_toast">Fold Toggle: this device isn\'t supported yet</string>
+    <string name="toggle_failed">Fold Toggle: %1$s</string>
+</resources>

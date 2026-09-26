@@ -1,0 +1,23 @@
+# Build outputs
+/build/
+/app/build/
+/.gradle/
+/.kotlin/
+local.properties
+*.apk
+*.aab
+*.idsig
+/app/release/
+
+# Signing secrets (NEVER commit) — includes extensionless keystores
+keystore.properties
+/keystore/
+*.keystore
+*.jks
+*.p12
+
+# IDE / OS
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
