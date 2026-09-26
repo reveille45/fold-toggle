@@ -38,6 +38,10 @@ Reports from working *and* non-working phones are both useful.
 
 Requires Android 14 or newer.
 
+**"Switch screens?" prompt:** on Pixel, Android itself asks for confirmation each time an
+app switches to the outer screen. Tap **Switch screens now**. (If you tap Cancel, nothing
+changes.) Switching back to the inner screen doesn't ask.
+
 ## How it works
 
 Android 14+ has a system service, `DeviceStateManager`, that tracks a foldable's

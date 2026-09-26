@@ -11,6 +11,7 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 
 /**
@@ -30,10 +31,12 @@ final class Fold {
     static volatile int target = -1;
     /** How {@link #target} was found, for the diagnostics screen. */
     static volatile String source = "not detected";
+    /** True while the outer screen is committed; maintained by {@link #watch}. */
     static volatile boolean forcedOuter = false;
 
     private static boolean detected;
     private static boolean watching;
+    private static final List<Runnable> listeners = new CopyOnWriteArrayList<>();
 
     static boolean supported(Context ctx) {
         detect(ctx);
@@ -172,8 +175,13 @@ final class Fold {
         return ctx.getSystemService("device_state");
     }
 
-    /** Keeps forcedOuter in sync with the committed device state; runs onChange on each update. */
+    /**
+     * Keeps forcedOuter in sync with the committed device state; runs onChange (if non-null)
+     * on each update. forcedOuter is only ever set here: a request can sit behind the system's
+     * "Switch screens?" confirmation, and the user may cancel it.
+     */
     static synchronized void watch(Context ctx, Runnable onChange) {
+        if (onChange != null && !listeners.contains(onChange)) listeners.add(onChange);
         if (watching) return;
         detect(ctx);
         try {
@@ -187,7 +195,7 @@ final class Fold {
                             int id = id(args[0]);
                             forcedOuter = id == target;
                             Log.i(TAG, "device state " + id);
-                            if (onChange != null) onChange.run();
+                            for (Runnable r : listeners) r.run();
                         } else if (n.equals("hashCode")) {
                             return System.identityHashCode(proxy);
                         } else if (n.equals("equals")) {
@@ -217,7 +225,6 @@ final class Fold {
 
     static void forceOuter(Context ctx) throws Exception {
         request(ctx, target);
-        forcedOuter = true;
         Log.i(TAG, "requested state " + target);
     }
 
@@ -227,7 +234,6 @@ final class Fold {
         request(ctx, target);
         Object dsm = dsm(ctx);
         dsm.getClass().getMethod("cancelStateRequest").invoke(dsm);
-        forcedOuter = false;
         Log.i(TAG, "cancelled request");
     }
 

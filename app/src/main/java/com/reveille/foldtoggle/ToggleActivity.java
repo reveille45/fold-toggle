@@ -24,7 +24,7 @@ public class ToggleActivity extends Activity {
     @Override
     protected void onCreate(Bundle b) {
         super.onCreate(b);
-        Fold.detect(this);
+        Fold.watch(getApplicationContext(), null); // current state arrives before window focus
         if (getIntent().hasExtra(EXTRA_STATE)) {
             Fold.target = getIntent().getIntExtra(EXTRA_STATE, Fold.target);
             Fold.source = "manual override";

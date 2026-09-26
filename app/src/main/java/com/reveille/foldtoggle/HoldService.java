@@ -5,10 +5,12 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
 import android.os.IBinder;
+import android.service.quicksettings.TileService;
 
 /**
  * Always-on notification: a one-tap toggle from either screen. Also keeps the process
@@ -16,6 +18,7 @@ import android.os.IBinder;
  */
 public class HoldService extends Service {
     private static final String CH = "hold";
+    private final Runnable postOnChange = this::post; // one instance, so watch() dedupes it
 
     /** Starts the service only on devices with a requestable rear-display state. */
     static void start(Context ctx) {
@@ -29,7 +32,7 @@ public class HoldService extends Service {
             stopSelf();
             return START_NOT_STICKY;
         }
-        Fold.watch(this, this::post);
+        Fold.watch(this, postOnChange);
         return START_STICKY;
     }
 
@@ -49,6 +52,7 @@ public class HoldService extends Service {
                 .setOngoing(true)
                 .build();
         startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+        TileService.requestListeningState(this, new ComponentName(this, ToggleTile.class));
     }
 
     @Override
