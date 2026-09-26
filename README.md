@@ -83,6 +83,16 @@ Lint needs a **JDK 21** runtime (AGP 9.3 lint crashes on JDK 17 with
 `NoSuchMethodError: List.removeLast()`); Android Studio's bundled JBR works. Release
 steps are in [docs/RELEASE.md](docs/RELEASE.md).
 
+## Support
+
+Fold Toggle is free, ad-free, and always will be. If it saved you a repair bill (or
+just some frustration), you can chip in:
+
+- **Cash App:** [$Reveille45](https://cash.app/$Reveille45)
+- **Venmo:** [@Charles-Warren-70](https://www.venmo.com/u/Charles-Warren-70)
+
+Device reports help just as much.
+
 ## License
 
 [MIT](LICENSE)
