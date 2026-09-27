@@ -31,9 +31,8 @@ public class ToggleActivity extends Activity {
             Fold.target = getIntent().getIntExtra(EXTRA_STATE, Fold.target);
             Fold.source = "manual override";
         }
-        if (getIntent().hasExtra(EXTRA_USE_EXTENSIONS)) {
-            Fold.forceExtensions = getIntent().getBooleanExtra(EXTRA_USE_EXTENSIONS, false);
-        }
+        // Per-launch only: a test/automation launch must not change later plain toggles.
+        Fold.forceExtensions = getIntent().getBooleanExtra(EXTRA_USE_EXTENSIONS, false);
         if (Fold.target < 0) {
             Toast.makeText(getApplicationContext(), R.string.unsupported_toast, Toast.LENGTH_LONG).show();
             startActivity(new Intent(this, MainActivity.class));

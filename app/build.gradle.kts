@@ -20,8 +20,8 @@ android {
         minSdk = 34
         targetSdk = 36
         // versionCode = major*1_000_000 + minor*1_000 + patch (monotonic across Play tracks)
-        versionCode = 1_000_001
-        versionName = "1.0.1"
+        versionCode = 1_000_002
+        versionName = "1.0.2"
     }
 
     signingConfigs {
