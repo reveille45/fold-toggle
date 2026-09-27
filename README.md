@@ -29,9 +29,15 @@ for "rear camera selfie" features. Only phones that expose it to apps can work.
 | Google Pixel 9 Pro Fold (Android 17) | ✅ Tested |
 | Google Pixel 10 Pro Fold (Android 16) | ✅ Tested |
 | Google Pixel 11 Pro Fold (Android 17) | ✅ Tested |
-| Google Pixel Fold (original) | 🟡 Expected to work — please report |
-| Samsung Galaxy Z Fold 5 and later (One UI 6+) | 🟡 Beta — untested |
-| Flip phones (Galaxy Z Flip, Motorola Razr) | ❌ Unlikely — cover screens usually aren't an app-requestable mode |
+| Google Pixel Fold (original, Android 16) | 🟡 Expected to work — same configuration as Pixel 10 Pro Fold |
+| Samsung Galaxy Z Fold 4 (Android 16) | ✅ Tested |
+| Samsung Galaxy Z Fold 5 / Fold 6 (Android 16) | ✅ Tested (switching back after the app was closed by the system: fix pending verification) |
+| Samsung Galaxy Z Flip 6 | ❌ Not supported — Android offers apps no cover-screen mode on flips |
+| Other flip phones (Motorola Razr etc.) | ❌ Unlikely, for the same reason |
+
+Tested on real devices via remote device streaming, September 2026. On Samsung the outer
+screen is reached through Samsung's own "closed" display mode, so the phone behaves as if
+folded.
 
 **Help add your phone:** open the app, scroll to *Device info*, and tap
 **Report this device on GitHub** (or copy the info into a

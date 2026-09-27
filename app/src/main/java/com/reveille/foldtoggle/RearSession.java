@@ -18,6 +18,8 @@ final class RearSession {
     private static boolean looked;
     /** True while a session started by this process is active (per the session callback). */
     private static volatile boolean owned;
+    /** Set by takeOverAndEnd: end the session as soon as it reports active. */
+    private static volatile boolean endWhenActive;
 
     static boolean ownsSession() {
         return owned;
@@ -69,6 +71,11 @@ final class RearSession {
 
     /** Starts a session in {@code state} if the library allows retargeting, else its default. */
     static void start(Activity activity, int state) throws Exception {
+        endWhenActive = false; // a user-requested session must never inherit a pending takeover end
+        startSession(activity, state);
+    }
+
+    private static void startSession(Activity activity, int state) throws Exception {
         Object c = component();
         if (c == null) throw new IllegalStateException("window extensions unavailable");
         if (retarget(c, state)) Log.i(Fold.TAG, "rear session retargeted to state " + state);
@@ -83,6 +90,15 @@ final class RearSession {
                             // SESSION_STATE_INACTIVE = 0; ACTIVE (1) / CONTENT_VISIBLE (2) = ours.
                             owned = !Integer.valueOf(0).equals(args[0]);
                             Log.i(Fold.TAG, "rear session status " + args[0]);
+                            if (owned && endWhenActive) {
+                                endWhenActive = false;
+                                try {
+                                    end();
+                                    Log.i(Fold.TAG, "takeover session ended on activation");
+                                } catch (Exception e) {
+                                    Log.w(Fold.TAG, "takeover end failed", e);
+                                }
+                            }
                             return null;
                         case "hashCode": return System.identityHashCode(proxy);
                         case "equals": return proxy == args[0];
@@ -96,12 +112,16 @@ final class RearSession {
     /**
      * Takes over a session left by an earlier process and ends it. Uses the library's default
      * state for the takeover because entering REAR_DISPLAY_STATE shows a confirmation prompt.
+     * Some OEMs (Samsung) activate sessions asynchronously and ignore an end() that arrives
+     * first, so the end is repeated from the session callback once it reports active.
      */
     static void takeOverAndEnd(Activity activity) throws Exception {
         Object c = component();
         if (c == null) throw new IllegalStateException("window extensions unavailable");
-        start(activity, defaultState);
-        end();
+        startSession(activity, defaultState);
+        endWhenActive = true;
+        end(); // enough on synchronous OEMs (Pixel); the callback repeats it for async ones
+        if (owned) endWhenActive = false;
     }
 
     static void end() throws Exception {
