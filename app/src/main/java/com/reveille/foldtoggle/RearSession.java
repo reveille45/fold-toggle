@@ -3,6 +3,7 @@ package com.reveille.foldtoggle;
 import android.app.Activity;
 import android.util.Log;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
@@ -36,13 +37,41 @@ final class RearSession {
         return component;
     }
 
+    /** The state the library picks itself (5 on Android 17 Pixels), or -1 if unknown. */
+    private static int defaultState = -1;
+
+    /**
+     * Points the library at a specific rear-display state before a session starts.
+     * WindowAreaComponentImpl keeps the state it requests in a plain field of its own
+     * (non-framework) class; on Android 17 Pixels it defaults to REAR_DISPLAY_OUTER_DEFAULT (5),
+     * which leaves the inner screen on. REAR_DISPLAY_STATE (3) turns it off. The library is
+     * platform code, so its own DeviceStateRequest call isn't blocked like ours.
+     * Returns false if this OEM's implementation has no such field (library default is used).
+     */
+    private static boolean retarget(Object c, int state) {
+        if (state < 0) return false;
+        try {
+            Field f = c.getClass().getDeclaredField("mRearDisplayState");
+            if (f.getType() != int.class) return false;
+            f.setAccessible(true);
+            if (defaultState < 0) defaultState = f.getInt(c);
+            f.setInt(c, state);
+            return true;
+        } catch (Throwable t) {
+            Log.i(Fold.TAG, "rear state field unavailable: " + t);
+            return false;
+        }
+    }
+
     static boolean available() {
         return component() != null;
     }
 
-    static void start(Activity activity) throws Exception {
+    /** Starts a session in {@code state} if the library allows retargeting, else its default. */
+    static void start(Activity activity, int state) throws Exception {
         Object c = component();
         if (c == null) throw new IllegalStateException("window extensions unavailable");
+        if (retarget(c, state)) Log.i(Fold.TAG, "rear session retargeted to state " + state);
         Method start = find(c, "startRearDisplaySession");
         // The session callback type differs by vendor API level (java.util.function.Consumer
         // vs androidx.window.extensions.core.util.function.Consumer), so proxy whichever it is.
@@ -62,6 +91,17 @@ final class RearSession {
                     }
                 });
         start.invoke(c, activity, cb);
+    }
+
+    /**
+     * Takes over a session left by an earlier process and ends it. Uses the library's default
+     * state for the takeover because entering REAR_DISPLAY_STATE shows a confirmation prompt.
+     */
+    static void takeOverAndEnd(Activity activity) throws Exception {
+        Object c = component();
+        if (c == null) throw new IllegalStateException("window extensions unavailable");
+        start(activity, defaultState);
+        end();
     }
 
     static void end() throws Exception {

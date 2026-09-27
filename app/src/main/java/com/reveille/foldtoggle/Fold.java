@@ -267,9 +267,8 @@ final class Fold {
     /**
      * Switches to the outer screen. Prefers the hidden request: on Pixel it enters
      * REAR_DISPLAY_STATE, which turns the inner screen off. WindowExtensions is the fallback for
-     * builds where the hidden API is unreachable; on Android 17 Pixels it enters
-     * REAR_DISPLAY_OUTER_DEFAULT, which keeps the inner screen lit with a "turn phone around"
-     * overlay (meant for rear-camera selfies) - worse, but better than failing.
+     * builds where the hidden API is unreachable (e.g. Pixel 11 Pro Fold); it is pointed at the
+     * same target state, so the inner screen still turns off (see RearSession#retarget).
      */
     static void forceOuter(Activity act) throws Exception {
         if (!forceExtensions) {
@@ -283,7 +282,7 @@ final class Fold {
                 Log.w(TAG, "hidden request API unreachable, using window extensions", e);
             }
         }
-        RearSession.start(act);
+        RearSession.start(act, target);
         path = "WindowExtensions";
         Log.i(TAG, "started rear display session");
     }
@@ -306,8 +305,8 @@ final class Fold {
         }
         // endRearDisplaySession silently does nothing for a session started by an earlier
         // process, so take the session over first unless this process owns it.
-        if (!RearSession.ownsSession()) RearSession.start(act);
-        RearSession.end();
+        if (RearSession.ownsSession()) RearSession.end();
+        else RearSession.takeOverAndEnd(act);
         path = "WindowExtensions";
         Log.i(TAG, "ended rear display session");
     }
