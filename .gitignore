@@ -21,3 +21,6 @@ keystore.properties
 *.iml
 .DS_Store
 Thumbs.db
+
+# Local reference screenshots (may contain other users' personal info)
+/screenshots/

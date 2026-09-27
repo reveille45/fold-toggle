@@ -19,6 +19,8 @@ public class ToggleActivity extends Activity {
     static final String EXTRA_WANT_OUTER = "wantOuter";
     /** Optional int: manual device-state override for devices detection gets wrong. */
     static final String EXTRA_STATE = "state";
+    /** Optional boolean: true = skip the hidden API and use the WindowExtensions path (testing). */
+    static final String EXTRA_USE_EXTENSIONS = "useExtensions";
     private boolean done;
 
     @Override
@@ -28,6 +30,9 @@ public class ToggleActivity extends Activity {
         if (getIntent().hasExtra(EXTRA_STATE)) {
             Fold.target = getIntent().getIntExtra(EXTRA_STATE, Fold.target);
             Fold.source = "manual override";
+        }
+        if (getIntent().hasExtra(EXTRA_USE_EXTENSIONS)) {
+            Fold.forceExtensions = getIntent().getBooleanExtra(EXTRA_USE_EXTENSIONS, false);
         }
         if (Fold.target < 0) {
             Toast.makeText(getApplicationContext(), R.string.unsupported_toast, Toast.LENGTH_LONG).show();
@@ -56,8 +61,8 @@ public class ToggleActivity extends Activity {
         } catch (Throwable t) {
             Throwable c = t instanceof InvocationTargetException ? t.getCause() : t;
             Log.e(Fold.TAG, "toggle failed", c);
-            Toast.makeText(getApplicationContext(), getString(R.string.toggle_failed, c.getMessage()),
-                    Toast.LENGTH_LONG).show();
+            Fold.path = "FAILED: " + c;
+            Toast.makeText(getApplicationContext(), R.string.toggle_failed, Toast.LENGTH_LONG).show();
         }
         HoldService.start(this); // refresh notification text
         TileService.requestListeningState(this, new ComponentName(this, ToggleTile.class));

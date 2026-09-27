@@ -28,6 +28,7 @@ for "rear camera selfie" features. Only phones that expose it to apps can work.
 |---|---|
 | Google Pixel 9 Pro Fold | ✅ Tested on Android 17 (the phone this was built for) |
 | Google Pixel Fold / Pixel 10 Pro Fold | 🟡 Expected to work — please report |
+| Google Pixel 11 Pro Fold | 🟡 1.0.0 failed (hidden API blocked); 1.0.1 uses the fallback path — please report |
 | Samsung Galaxy Z Fold 5 and later (One UI 6+) | 🟡 Beta — Samsung supports rear display mode; untested |
 | Flip phones (Galaxy Z Flip, Motorola Razr) | ❌ Unlikely — cover screens usually aren't an app-requestable mode |
 
@@ -54,6 +55,13 @@ SDK — so the app calls it via reflection:
    `REAR_DISPLAY`.
 2. **Request** it from an invisible activity — the platform only accepts requests from
    the focused, top-most app. (`CLOSED` itself can never be requested by apps.)
+   - **Primary:** the hidden `DeviceStateRequest` API. On Pixel this enters
+     `REAR_DISPLAY_STATE`: inner screen **off**, outer on. Android shows a one-time
+     "Switch screens?" confirmation per switch.
+   - **Fallback** (builds that block the hidden API, e.g. Pixel 11 Pro Fold): the OEM's
+     WindowManager Extensions rear-display session — the supported API Jetpack uses. On
+     Android 17 Pixels it enters `REAR_DISPLAY_OUTER_DEFAULT`, which keeps the inner screen
+     lit with a "Turn phone around" overlay (swipe it to exit). Works, but uses more battery.
 3. **Hold** it with a foreground service, because a request lives only as long as the
    requesting process.
 4. **Release** by re-requesting (to own the request) then cancelling.
@@ -67,6 +75,7 @@ adb shell am start -n com.reveille.foldtoggle/.ToggleActivity                   
 adb shell am start -n com.reveille.foldtoggle/.ToggleActivity --ez wantOuter true  # force outer
 adb shell am start -n com.reveille.foldtoggle/.ToggleActivity --ez wantOuter false # back to inner
 adb shell am start -n com.reveille.foldtoggle/.ToggleActivity --ei state 3         # manual state ID
+adb shell am start -n com.reveille.foldtoggle/.ToggleActivity --ez useExtensions true  # test fallback path
 ```
 
 `state` overrides detection for the life of the app process — useful for testing a

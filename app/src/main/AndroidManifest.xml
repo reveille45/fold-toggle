@@ -11,6 +11,11 @@
         android:label="@string/app_name"
         android:theme="@android:style/Theme.DeviceDefault.DayNight">
 
+        <!-- OEM rear-display implementation; fallback when the hidden API is unreachable. -->
+        <uses-library
+            android:name="androidx.window.extensions"
+            android:required="false" />
+
         <!-- Setup / status screen. -->
         <activity
             android:name=".MainActivity"

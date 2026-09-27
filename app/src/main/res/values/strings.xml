@@ -29,5 +29,5 @@
 
     <string name="shortcut_switch">Switch screen</string>
     <string name="unsupported_toast">Fold Toggle: this device isn\'t supported yet</string>
-    <string name="toggle_failed">Fold Toggle: %1$s</string>
+    <string name="toggle_failed">Fold Toggle couldn\'t switch screens on this Android version. Open the app and tap \"Report this device on GitHub\" so it can be fixed.</string>
 </resources>

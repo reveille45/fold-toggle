@@ -1,6 +1,7 @@
 package com.reveille.foldtoggle;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
 import android.content.res.Resources;
 import android.os.Build;
@@ -11,6 +12,8 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 
@@ -34,6 +37,17 @@ final class Fold {
     /** True while the outer screen is committed; maintained by {@link #watch}. */
     static volatile boolean forcedOuter = false;
 
+    /**
+     * Every rear-display-like state ID. Paths can land in different ones (Pixel on Android 17:
+     * the hidden request uses 3 REAR_DISPLAY_STATE, WindowExtensions uses 5
+     * REAR_DISPLAY_OUTER_DEFAULT), and all of them mean "outer screen".
+     */
+    static final Set<Integer> rearStates = ConcurrentHashMap.newKeySet();
+    /** Which request path last succeeded ("DeviceStateManager" or "WindowExtensions"). */
+    static volatile String path = "none yet";
+    /** Testing knob: skip the hidden API and use the WindowExtensions path directly. */
+    static volatile boolean forceExtensions = false;
+
     private static boolean detected;
     private static boolean watching;
     private static final List<Runnable> listeners = new CopyOnWriteArrayList<>();
@@ -53,6 +67,12 @@ final class Fold {
         if (detected) return;
         detected = true;
         List<Object> states = supportedStates(ctx);
+        for (Object s : states) {
+            if (hasProperty(s, "PROPERTY_FEATURE_REAR_DISPLAY")
+                    || name(s).toUpperCase(Locale.ROOT).contains("REAR_DISPLAY")) {
+                rearStates.add(id(s));
+            }
+        }
 
         int cfg = rearDisplayConfig();
         if (cfg >= 0 && idOf(states, cfg) != null && !hasProperty(idOf(states, cfg), "PROPERTY_APP_INACCESSIBLE")) {
@@ -76,6 +96,7 @@ final class Fold {
 
     private static void set(int id, String how) {
         target = id;
+        rearStates.add(id);
         source = how;
         Log.i(TAG, "rear-display state " + id + " via " + how);
     }
@@ -91,6 +112,10 @@ final class Fold {
         sb.append("App: ").append(BuildConfig.VERSION_NAME).append('\n');
         sb.append("config_deviceStateRearDisplay: ").append(rearDisplayConfig()).append('\n');
         sb.append("Detected target: ").append(target).append(" (").append(source).append(")\n");
+        sb.append("Rear states: ").append(rearStates).append('\n');
+        sb.append("Hidden request API: ").append(hiddenRequestAvailable() ? "available" : "MISSING").append('\n');
+        sb.append("Window extensions: ").append(RearSession.available() ? "available" : "missing").append('\n');
+        sb.append("Last path used: ").append(path).append('\n');
         sb.append("Supported states:\n");
         List<Object> states = supportedStates(ctx);
         if (states.isEmpty()) sb.append("  (none readable)\n");
@@ -193,7 +218,7 @@ final class Fold {
                         String n = method.getName();
                         if (n.equals("onDeviceStateChanged") || n.equals("onStateChanged")) {
                             int id = id(args[0]);
-                            forcedOuter = id == target;
+                            forcedOuter = id == target || rearStates.contains(id);
                             Log.i(TAG, "device state " + id);
                             for (Runnable r : listeners) r.run();
                         } else if (n.equals("hashCode")) {
@@ -223,18 +248,68 @@ final class Fold {
         m.invoke(dsm, req, null, null);
     }
 
-    static void forceOuter(Context ctx) throws Exception {
-        request(ctx, target);
-        Log.i(TAG, "requested state " + target);
+    /** True if this build still lets apps reach DeviceStateRequest.newBuilder(int). */
+    static boolean hiddenRequestAvailable() {
+        try {
+            Class.forName("android.hardware.devicestate.DeviceStateRequest")
+                    .getMethod("newBuilder", int.class);
+            return true;
+        } catch (Throwable t) {
+            return false;
+        }
     }
 
-    static void release(Context ctx) throws Exception {
-        // The active request may belong to an earlier process of ours; re-request to own it,
-        // then cancel (cancelStateRequest only cancels the caller's own request).
-        request(ctx, target);
-        Object dsm = dsm(ctx);
-        dsm.getClass().getMethod("cancelStateRequest").invoke(dsm);
-        Log.i(TAG, "cancelled request");
+    /** Hidden API missing or blocked on this build (reflection reports blocked members as absent). */
+    private static boolean unreachable(Throwable t) {
+        return t instanceof NoSuchMethodException || t instanceof ClassNotFoundException;
+    }
+
+    /**
+     * Switches to the outer screen. Prefers the hidden request: on Pixel it enters
+     * REAR_DISPLAY_STATE, which turns the inner screen off. WindowExtensions is the fallback for
+     * builds where the hidden API is unreachable; on Android 17 Pixels it enters
+     * REAR_DISPLAY_OUTER_DEFAULT, which keeps the inner screen lit with a "turn phone around"
+     * overlay (meant for rear-camera selfies) - worse, but better than failing.
+     */
+    static void forceOuter(Activity act) throws Exception {
+        if (!forceExtensions) {
+            try {
+                request(act, target);
+                path = "DeviceStateManager";
+                Log.i(TAG, "requested state " + target);
+                return;
+            } catch (Exception e) {
+                if (!unreachable(e) || !RearSession.available()) throw e;
+                Log.w(TAG, "hidden request API unreachable, using window extensions", e);
+            }
+        }
+        RearSession.start(act);
+        path = "WindowExtensions";
+        Log.i(TAG, "started rear display session");
+    }
+
+    static void release(Activity act) throws Exception {
+        if (!forceExtensions) {
+            try {
+                // The active request may belong to an earlier process of ours (from either path);
+                // re-request to own it, then cancel (cancelStateRequest only cancels our own).
+                request(act, target);
+                Object dsm = dsm(act);
+                dsm.getClass().getMethod("cancelStateRequest").invoke(dsm);
+                path = "DeviceStateManager";
+                Log.i(TAG, "cancelled request");
+                return;
+            } catch (Exception e) {
+                if (!unreachable(e) || !RearSession.available()) throw e;
+                Log.w(TAG, "hidden request API unreachable, using window extensions", e);
+            }
+        }
+        // endRearDisplaySession silently does nothing for a session started by an earlier
+        // process, so take the session over first unless this process owns it.
+        if (!RearSession.ownsSession()) RearSession.start(act);
+        RearSession.end();
+        path = "WindowExtensions";
+        Log.i(TAG, "ended rear display session");
     }
 
     private Fold() {}
